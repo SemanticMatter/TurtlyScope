@@ -1,0 +1,166 @@
+:root {
+        --bg: #0b1020;
+        --bg-soft: #0f1428;
+        --card: #111936;
+        --text: #e7ecf5;
+        --muted: #a9b3c9;
+        --accent: #6ea8fe;
+        --accent-2: #9b8cff;
+        --border: #223055;
+        --glow: 0 10px 30px rgba(110,168,254,0.25);
+      }
+      @media (prefers-color-scheme: light) {
+        :root {
+          --bg: #f7f8fb;
+          --bg-soft: #eef2fb;
+          --card: #ffffff;
+          --text: #0f172a;
+          --muted: #51607a;
+          --accent: #3b82f6;
+          --accent-2: #7c3aed;
+          --border: #dbe2f1;
+          --glow: 0 10px 30px rgba(59,130,246,0.25);
+        }
+      }
+
+      /* Base layout */
+      * { box-sizing: border-box; }
+      html, body { height: 100%; }
+      body {
+        margin: 0;
+        font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+        color: var(--text);
+        background:
+          radial-gradient(1000px 600px at 20% -10%, rgba(110,168,254,0.25), transparent 60%),
+          radial-gradient(800px 500px at 120% 20%, rgba(155,140,255,0.20), transparent 60%),
+          linear-gradient(180deg, var(--bg-soft), var(--bg));
+      }
+
+      .wrap {
+        max-width: 900px;
+        margin: min(8vw,5rem) auto;
+        padding: 0 1.25rem 3rem;
+      }
+
+      /* Header */
+      header {
+        display: flex; align-items: center; gap: 1rem; margin-bottom: 1.25rem;
+      }
+      .logo {
+        width: 52px; height: 52px; display: grid; place-items: center;
+        border-radius: 14px;
+        background: linear-gradient(135deg, var(--accent), var(--accent-2));
+        color: #fff; font-size: 1.5rem; box-shadow: var(--glow);
+      }
+      h1 {
+        margin: 0;
+        font-size: clamp(1.5rem, 3.5vw, 2.25rem);
+        letter-spacing: 0.2px;
+      }
+      .subtitle {
+        margin: 0.25rem 0 0; color: var(--muted); font-size: 0.975rem;
+      }
+
+      /* Card */
+      .card {
+        background: color-mix(in srgb, var(--card) 92%, transparent);
+        border: 1px solid var(--border);
+        border-radius: 16px;
+        padding: 1.25rem;
+        box-shadow: 0 6px 30px rgba(0,0,0,0.12);
+      }
+
+      /* Textarea */
+      .input-label {
+        display: flex; align-items: center; justify-content: space-between;
+        gap: 0.75rem; margin-bottom: 0.5rem;
+      }
+      .input-label span { color: var(--muted); font-size: 0.9rem; }
+      textarea[name="turtle"] {
+        width: 100%;
+        min-height: min(52vh, 520px);
+        resize: vertical;
+        font: 500 0.95rem/1.45 ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
+        padding: 1rem 1.1rem;
+        border-radius: 12px;
+        background: linear-gradient(180deg, color-mix(in srgb, var(--card) 96%, transparent), color-mix(in srgb, var(--card) 92%, transparent));
+        border: 1px solid var(--border);
+        color: var(--text);
+        outline: none;
+        transition: border-color .2s ease, box-shadow .2s ease, background .2s ease;
+        caret-color: var(--accent);
+      }
+      textarea[name="turtle"]:focus {
+        border-color: color-mix(in srgb, var(--accent) 60%, var(--border));
+        box-shadow: 0 0 0 4px color-mix(in srgb, var(--accent) 20%, transparent);
+      }
+      textarea::placeholder { color: color-mix(in srgb, var(--muted) 70%, transparent); }
+
+      /* Controls row */
+      .controls {
+        display: flex; flex-wrap: wrap; gap: 0.75rem; align-items: center; margin-top: 0.9rem;
+      }
+
+      /* Fancy toggle for include_literals */
+      .switch {
+        --h: 22px;
+        position: relative; display: inline-flex; align-items: center; gap: 0.5rem;
+        font-size: 0.95rem; color: var(--muted);
+      }
+      .switch input { position: absolute; opacity: 0; inset: 0; cursor: pointer; }
+      .track {
+        width: 42px; height: var(--h); border-radius: 999px;
+        background: color-mix(in srgb, var(--border) 60%, transparent);
+        border: 1px solid var(--border);
+        transition: background .2s ease, border-color .2s ease;
+        position: relative;
+      }
+      .thumb {
+        width: calc(var(--h) - 6px); height: calc(var(--h) - 6px);
+        background: #fff; border-radius: 999px; position: absolute; top: 50%; left: 3px; translate: 0 -50%;
+        box-shadow: 0 3px 10px rgba(0,0,0,0.25);
+        transition: left .2s ease, background .2s ease;
+      }
+      .switch input:checked + .track { background: color-mix(in srgb, var(--accent) 45%, transparent); border-color: color-mix(in srgb, var(--accent) 60%, var(--border)); }
+      .switch input:checked + .track .thumb { left: calc(100% - (var(--h) - 3px)); }
+
+      /* Buttons */
+      .btn-row { display: flex; flex-wrap: wrap; gap: 0.6rem; margin-top: 0.6rem; }
+      .btn {
+        padding: 0.6rem 0.95rem;
+        border-radius: 12px;
+        border: 1px solid var(--border);
+        background: linear-gradient(180deg, color-mix(in srgb, var(--card) 96%, transparent), color-mix(in srgb, var(--card) 92%, transparent));
+        color: var(--text);
+        cursor: pointer;
+        transition: transform .06s ease, box-shadow .2s ease, border-color .2s ease, background .2s ease;
+      }
+      .btn:hover { transform: translateY(-1px); box-shadow: 0 6px 16px rgba(0,0,0,0.14); }
+      .btn:active { transform: translateY(0); }
+
+      .btn-primary {
+        background: linear-gradient(135deg, var(--accent), var(--accent-2));
+        color: #fff; border: none; box-shadow: var(--glow);
+      }
+      .btn-outline { color: var(--muted); }
+
+      /* Footnote */
+      .hint {
+        margin-top: 0.5rem; color: var(--muted); font-size: 0.85rem;
+      }
+
+      /* Keep your existing .graph height in case it’s used elsewhere */
+      .graph { height: 80vh; }
+      
+      /* Footer */
+    .footer-brand{
+        position: fixed;
+        right: 1rem;
+        bottom: 1rem;
+        color: var(--muted);
+        font-size: .9rem;
+        opacity: .9;
+        z-index: 1000;
+        user-select: none;
+        pointer-events: none; /* don't block graph or clicks */
+    }

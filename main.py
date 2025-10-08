@@ -1,8 +1,9 @@
-""" Single FastAPI app for visualizing RDF contents from Turtle format
+"""Single FastAPI app for visualizing RDF contents from Turtle format
 
 Thomas F. Hagelien
 SINTEF, SemanticMatter - 2025
 """
+
 import re
 from fastapi import FastAPI, Form
 from fastapi.responses import HTMLResponse, PlainTextResponse
@@ -11,7 +12,6 @@ from rdflib.namespace import NamespaceManager
 from pyvis.network import Network
 import tempfile
 import pathlib
-
 
 
 app = FastAPI()
@@ -364,13 +364,20 @@ HEADER_HTML = """
 </header>
 """
 
+
 def apply_theme_to_pyvis_html(pyvis_html: str) -> str:
     """
     Injects our theme CSS, header, and a 'Back to Home' button into the PyVis HTML.
     Works with the standard HTML skeleton that pyvis.write_html generates.
     """
     # 1) Add our CSS into <head>
-    themed = re.sub(r"<head(.*?)>", lambda m: f"<head{m.group(1)}>{THEME_CSS}", pyvis_html, count=1, flags=re.I|re.S)
+    themed = re.sub(
+        r"<head(.*?)>",
+        lambda m: f"<head{m.group(1)}>{THEME_CSS}",
+        pyvis_html,
+        count=1,
+        flags=re.I | re.S,
+    )
 
     # 2) Wrap the body content with our container + toolbar
     #    Insert header + card + toolbar right after <body>
@@ -383,10 +390,18 @@ def apply_theme_to_pyvis_html(pyvis_html: str) -> str:
           <span class="hint">Tip: pan with drag, zoom with wheel</span>
         </div>
     """
-    themed = re.sub(r"<body(.*?)>", lambda m: f"<body{m.group(1)}>{inject_top}", themed, count=1, flags=re.I|re.S)
+    themed = re.sub(
+        r"<body(.*?)>",
+        lambda m: f"<body{m.group(1)}>{inject_top}",
+        themed,
+        count=1,
+        flags=re.I | re.S,
+    )
 
     # 3) Close our wrappers before </body>
-    themed = re.sub(r"</body>", "</div></div></body>", themed, count=1, flags=re.I|re.S)
+    themed = re.sub(
+        r"</body>", "</div></div></body>", themed, count=1, flags=re.I | re.S
+    )
 
     return themed
 
@@ -410,16 +425,18 @@ def _qname_or_str(g: Graph, term) -> str:
             return str(term)
     return str(term)
 
+
 def visualize_rdflib_graph_to_html(graph: Graph, include_literals: bool) -> str:
     net = Network(
         height="100%",
         width="100%",
         bgcolor="#0b1020",
         font_color="#e7ecf5",
-        cdn_resources="in_line"
+        cdn_resources="in_line",
     )
 
     added = set()
+
     def add_node(term):
         if term in added:
             return str(id(term)) if isinstance(term, Literal) else str(term)
@@ -486,7 +503,9 @@ def visualize(turtle: str = Form(...), include_literals: str | None = Form(None)
     try:
         g = Graph()
         g.parse(data=turtle, format="turtle")
-        html = visualize_rdflib_graph_to_html(g, include_literals=include_literals is not None)
+        html = visualize_rdflib_graph_to_html(
+            g, include_literals=include_literals is not None
+        )
         return html
     except Exception as e:
         return HTMLResponse(f"<pre>Parse error:\n{e}</pre>", status_code=400)
