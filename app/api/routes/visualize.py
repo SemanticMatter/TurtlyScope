@@ -1,6 +1,9 @@
+from __future__ import annotations
+
 from fastapi import APIRouter, Form, HTTPException
 from fastapi.responses import HTMLResponse
 from rdflib import Graph
+
 from app.core.config import settings
 from app.services.graph_viz import visualize_rdflib_graph_to_html
 
@@ -22,7 +25,7 @@ def visualize(turtle: str = Form(...), include_literals: bool = Form(True)):
         g.parse(data=turtle, format="turtle")
     except Exception as e:
         # Keep message terse for UX; detailed logs can carry full exception.
-        raise HTTPException(status_code=400, detail=f"Parse error: {e}")
+        raise HTTPException(status_code=400, detail=f"Parse error: {e}") from e
 
     html = visualize_rdflib_graph_to_html(
         graph=g,

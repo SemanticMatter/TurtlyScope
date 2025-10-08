@@ -1,14 +1,16 @@
-from fastapi import FastAPI
-from fastapi.staticfiles import StaticFiles
-from fastapi.middleware.gzip import GZipMiddleware
-from starlette.middleware.trustedhost import TrustedHostMiddleware
-from fastapi.middleware.cors import CORSMiddleware
+from __future__ import annotations
 
+from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
+from fastapi.middleware.gzip import GZipMiddleware
+from fastapi.staticfiles import StaticFiles
+from starlette.middleware.trustedhost import TrustedHostMiddleware
+
+from app.api.routes.pages import router as pages_router
+from app.api.routes.visualize import router as viz_router
 from app.core.config import settings
 from app.core.logging import setup_logging
 from app.core.security import SecurityHeadersMiddleware
-from app.api.routes.pages import router as pages_router
-from app.api.routes.visualize import router as viz_router
 
 
 def create_app() -> FastAPI:

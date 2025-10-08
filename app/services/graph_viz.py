@@ -1,11 +1,12 @@
+from __future__ import annotations
+
 import pathlib
 import re
 import tempfile
-from typing import Union
 
-from rdflib import Graph, URIRef, BNode, Literal
-from rdflib.namespace import NamespaceManager
 from pyvis.network import Network
+from rdflib import BNode, Graph, Literal, URIRef
+from rdflib.namespace import NamespaceManager
 
 # --- Presentation fragments moved from templates into service boundary where needed ---
 
@@ -70,7 +71,7 @@ HEADER_HTML = """
 """
 
 
-def _qname_or_str(g: Graph, term: Union[URIRef, BNode, Literal, str]) -> str:
+def _qname_or_str(g: Graph, term: URIRef | BNode | Literal | str) -> str:
     if isinstance(term, Literal):
         if term.language:
             return f'"{term}"@{term.language}'
@@ -78,14 +79,14 @@ def _qname_or_str(g: Graph, term: Union[URIRef, BNode, Literal, str]) -> str:
             nm: NamespaceManager = g.namespace_manager
             try:
                 dt = nm.normalizeUri(term.datatype)
-            except Exception:
+            except Exception:  # noqa: BLE001
                 dt = str(term.datatype)
             return f'"{term}"^^{dt}'
         return f'"{term}"'
     if isinstance(term, (URIRef, BNode)):
         try:
             return g.namespace_manager.normalizeUri(term)
-        except Exception:
+        except Exception:  # noqa: BLE001
             return str(term)
     return str(term)
 
@@ -116,11 +117,8 @@ def _apply_theme_to_pyvis_html(pyvis_html: str) -> str:
         count=1,
         flags=re.I | re.S,
     )
-    # 3) Close wrappers before </body>
-    themed = re.sub(
-        r"</body>", "</div></div></body>", themed, count=1, flags=re.I | re.S
-    )
-    return themed
+
+    return re.sub(r"</body>", "</div></div></body>", themed, count=1, flags=re.I | re.S)
 
 
 def visualize_rdflib_graph_to_html(
@@ -147,23 +145,26 @@ def visualize_rdflib_graph_to_html(
             net.add_node(
                 node_id,
                 label=_qname_or_str(graph, term),
-                title=f"Literal\nvalue={term}\ndatatype={getattr(term, 'datatype', None)}\nlang={getattr(term, 'language', None)}",
+                title=(
+                    f"Literal\nvalue={term}\n"
+                    "datatype={getattr(term, 'datatype', None)}\n"
+                    "lang={getattr(term, 'language', None)}"
+                ),
                 shape="box",
                 group="Literal",
             )
             seen.add(term)
             return node_id
-        else:
-            group = "BNode" if isinstance(term, BNode) else "IRI"
-            node_id = str(term)
-            net.add_node(
-                node_id,
-                label=_qname_or_str(graph, term),
-                title=f"{group}\n{term}",
-                group=group,
-            )
-            seen.add(term)
-            return node_id
+        group = "BNode" if isinstance(term, BNode) else "IRI"
+        node_id = str(term)
+        net.add_node(
+            node_id,
+            label=_qname_or_str(graph, term),
+            title=f"{group}\n{term}",
+            group=group,
+        )
+        seen.add(term)
+        return node_id
 
     for s, p, o in graph.triples((None, None, None)):
         sid = add_node(s)

@@ -151,7 +151,7 @@
 
       /* Keep your existing .graph height in case it’s used elsewhere */
       .graph { height: 80vh; }
-      
+
       /* Footer */
     .footer-brand{
         position: fixed;

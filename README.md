@@ -4,13 +4,13 @@
 It transforms plain RDF triples into a network diagram, helping you quickly explore relationships between subjects, predicates, and objects.
 
 At its core, TurtlyScope provides:
+
 ## **Getting started**
 
-```bash
-git clone <your-repo-url> turtlyscope
-cd turtlyscope
+If you don't want to use `uv` you can set up a virtual environment explicitly
 
-python3.11 -m venv .venv
+```bash
+python3 -m venv .venv
 source .venv/bin/activate
 pip install --upgrade pip
 pip install -r requirements.txt
@@ -18,6 +18,13 @@ pip install -r requirements.txt
 ```
 
 ## **Run the Server from shell**
+
+**Using `uv`**
+```sh
+uv run uvicorn app.main:app --host 0.0.0.0 --port 8000
+```
+
+Without `uv` you need to set up the virtual environment and activate it before you can proceed with:
 
 ```sh
 uvicorn app.main:app --host 0.0.0.0 --port 8000
