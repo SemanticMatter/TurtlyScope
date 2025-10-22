@@ -135,35 +135,41 @@ def visualize_rdflib_graph_to_html(
         cdn_resources="in_line",  # self-contained HTML
     )
 
-    seen = set()
+    # Map RDF terms -> stable node ids. Works because RDFLib terms are hashable by value.
+    node_ids: dict[object, str] = {}
+    lit_counter = 0  # readable, stable-ish ids for literals
+
+    def _make_literal_id(lit: Literal) -> str:
+        # Stable id per literal value+datatype+language; counter avoids long hashes.
+        nonlocal lit_counter
+        lit_counter += 1
+        return f"lit:{lit_counter}"
 
     def add_node(term):
-        if term in seen:
-            return str(id(term)) if isinstance(term, Literal) else str(term)
+        # Reuse an existing id for equal terms (incl. equal-valued literals).
+        if term in node_ids:
+            return node_ids[term]
+
         if isinstance(term, Literal):
-            node_id = str(id(term))
+            node_id = _make_literal_id(term)
             net.add_node(
                 node_id,
                 label=_qname_or_str(graph, term),
-                title=(
-                    f"Literal\nvalue={term}\n"
-                    "datatype={getattr(term, 'datatype', None)}\n"
-                    "lang={getattr(term, 'language', None)}"
-                ),
+                title=f"Literal\nvalue={term}\ndatatype={getattr(term, 'datatype', None)}\nlang={getattr(term, 'language', None)}",
                 shape="box",
                 group="Literal",
             )
-            seen.add(term)
-            return node_id
-        group = "BNode" if isinstance(term, BNode) else "IRI"
-        node_id = str(term)
-        net.add_node(
-            node_id,
-            label=_qname_or_str(graph, term),
-            title=f"{group}\n{term}",
-            group=group,
-        )
-        seen.add(term)
+        else:
+            group = "BNode" if isinstance(term, BNode) else "IRI"
+            node_id = str(term)  # IRI/BNode string is stable
+            net.add_node(
+                node_id,
+                label=_qname_or_str(graph, term),
+                title=f"{group}\n{term}",
+                group=group,
+            )
+
+        node_ids[term] = node_id
         return node_id
 
     for s, p, o in graph.triples((None, None, None)):
