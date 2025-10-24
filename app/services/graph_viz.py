@@ -7,6 +7,20 @@ import tempfile
 from pyvis.network import Network
 from rdflib import BNode, Graph, Literal, URIRef
 from rdflib.namespace import NamespaceManager
+from rdflib.extras.external_graph_libs import rdflib_to_networkx_digraph
+import networkx as nx
+from networkx.algorithms.community import (
+    louvain_communities,
+    asyn_lpa_communities,
+    greedy_modularity_communities,
+    quality,
+)
+
+try:
+    from networkx.algorithms.community import leiden_communities
+    HAS_LEIDEN = True
+except Exception:  # noqa: BLE001
+    HAS_LEIDEN = False
 
 # --- Presentation fragments moved from templates into service boundary where needed ---
 
@@ -91,7 +105,7 @@ def _qname_or_str(g: Graph, term: URIRef | BNode | Literal | str) -> str:
     return str(term)
 
 
-def _apply_theme_to_pyvis_html(pyvis_html: str) -> str:
+def _apply_theme_to_pyvis_html(pyvis_html: str, toolbar_right_extra: str = "") -> str:
     # 1) Insert CSS in <head>
     themed = re.sub(
         r"<head(.*?)>",
@@ -108,6 +122,8 @@ def _apply_theme_to_pyvis_html(pyvis_html: str) -> str:
         <div class="toolbar">
           <a class="btn" href="/">← Back to Home</a>
           <span class="hint">Tip: pan with drag, zoom with wheel</span>
+          <span style="margin-left:auto"></span>
+          {toolbar_right_extra}
         </div>
     """
     themed = re.sub(
@@ -121,51 +137,105 @@ def _apply_theme_to_pyvis_html(pyvis_html: str) -> str:
     return re.sub(r"</body>", "</div></div></body>", themed, count=1, flags=re.I | re.S)
 
 
+
 def visualize_rdflib_graph_to_html(
     graph: Graph,
     include_literals: bool,
     bgcolor: str = "#0b1020",
     fontcolor: str = "#e7ecf5",
+    community_algo: str = "leiden",   # ← NEW
 ) -> str:
     net = Network(
         height="100%",
         width="100%",
         bgcolor=bgcolor,
         font_color=fontcolor,
-        cdn_resources="in_line",  # self-contained HTML
+        cdn_resources="in_line",
     )
 
-    # Map RDF terms -> stable node ids. Works because RDFLib terms are hashable by value.
+    # --- Build an NX view of the RDF graph for community detection ---
+    nx_dg = rdflib_to_networkx_digraph(graph)  # nodes are rdflib terms
+    G_u = nx_dg.to_undirected()
+
+    # Compute communities (non-overlapping)
+    comms: list[set] | None = None
+    algo_used = "none"
+    try:
+        if community_algo == "leiden":
+            if HAS_LEIDEN:
+                comms = list(leiden_communities(G_u, weight=None, resolution=1.0, seed=42))
+                algo_used = "leiden"
+            else:
+                # graceful fallback if Leiden not available
+                comms = list(louvain_communities(G_u, weight=None, resolution=1.0, seed=42))
+                algo_used = "louvain (fallback)"
+        elif community_algo == "louvain":
+            comms = list(louvain_communities(G_u, weight=None, resolution=1.0, seed=42))
+            algo_used = "louvain"
+        elif community_algo == "label_propagation":
+            comms = list(asyn_lpa_communities(G_u, weight=None, seed=42))
+            algo_used = "label_propagation"
+        elif community_algo == "greedy_modularity":
+            comms = list(greedy_modularity_communities(G_u, weight=None, resolution=1.0))
+            algo_used = "greedy_modularity"
+        else:
+            comms = None
+            algo_used = "none"
+    except Exception:
+        # If anything fails, render without community coloring
+        comms = None
+        algo_used = "none"
+
+    # Map node -> community id (if we have communities)
+    node_to_comm: dict[object, int] = {}
+    if comms:
+        for cid, cset in enumerate(comms):
+            for n in cset:
+                node_to_comm[n] = cid
+
+    # Optional: modularity (only if we have a partition)
+    modularity = None
+    if comms:
+        try:
+            modularity = quality.modularity(G_u, comms, weight=None)
+        except Exception:
+            modularity = None
+
+    # ---- PyVis node/edge construction (color by community via "group") ----
+
     node_ids: dict[object, str] = {}
-    lit_counter = 0  # readable, stable-ish ids for literals
+    lit_counter = 0
 
     def _make_literal_id(lit: Literal) -> str:
-        # Stable id per literal value+datatype+language; counter avoids long hashes.
         nonlocal lit_counter
         lit_counter += 1
         return f"lit:{lit_counter}"
 
     def add_node(term):
-        # Reuse an existing id for equal terms (incl. equal-valued literals).
         if term in node_ids:
             return node_ids[term]
+
+        # PyVis color handling: set 'group' == community id if known, otherwise type-based
+        comm_group = node_to_comm.get(term, None)
+        group = f"C{comm_group}" if comm_group is not None else ("BNode" if isinstance(term, BNode) else "IRI")
 
         if isinstance(term, Literal):
             node_id = _make_literal_id(term)
             net.add_node(
                 node_id,
                 label=_qname_or_str(graph, term),
-                title=f"Literal\nvalue={term}\ndatatype={getattr(term, 'datatype', None)}\nlang={getattr(term, 'language', None)}",
+                title=f"Literal\nvalue={term}\ndatatype={getattr(term, 'datatype', None)}\nlang={getattr(term, 'language', None)}"
+                      + (f"\ncommunity=C{comm_group}" if comm_group is not None else ""),
                 shape="box",
-                group="Literal",
+                group=f"C{comm_group}" if comm_group is not None else "Literal",
             )
         else:
-            group = "BNode" if isinstance(term, BNode) else "IRI"
-            node_id = str(term)  # IRI/BNode string is stable
+            node_id = str(term)
             net.add_node(
                 node_id,
                 label=_qname_or_str(graph, term),
-                title=f"{group}\n{term}",
+                title=f"{'BNode' if isinstance(term, BNode) else 'IRI'}\n{term}"
+                      + (f"\ncommunity=C{comm_group}" if comm_group is not None else ""),
                 group=group,
             )
 
@@ -195,9 +265,20 @@ def visualize_rdflib_graph_to_html(
     }"""
     )
 
+    # Render PyVis
     with tempfile.TemporaryDirectory() as tmpdir:
         out = pathlib.Path(tmpdir) / "graph.html"
         net.write_html(str(out), open_browser=False, notebook=False)
         raw = out.read_text(encoding="utf-8")
 
-    return _apply_theme_to_pyvis_html(raw)
+    # Toolbar status badge (algo, #comms, modularity)
+    k = len(comms) if comms else 0
+    mod_str = f"{modularity:.3f}" if isinstance(modularity, (int, float)) else "—"
+    badge = f"""
+      <span class="hint" style="opacity:.9">
+        algo: <b>{algo_used}</b> • communities: <b>{k}</b> • modularity: <b>{mod_str}</b>
+      </span>
+    """
+
+    return _apply_theme_to_pyvis_html(raw, toolbar_right_extra=badge)
+

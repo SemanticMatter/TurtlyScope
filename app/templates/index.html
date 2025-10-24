@@ -16,6 +16,19 @@ ex:Bob ex:age &quot;42&quot;^^<http://www.w3.org/2001/XMLSchema#integer> ."></te
         <span class="track" aria-hidden="true"><span class="thumb"></span></span>
         <span>include literals</span>
       </label>
+
+      <!-- NEW: community algorithm selector -->
+      <label class="input-label" for="community_algo" style="margin-left:.75rem">
+        <span>Community algorithm</span>
+        <select name="community_algo" id="community_algo">
+          <option value="leiden" selected>Leiden (default)</option>
+          <option value="louvain">Louvain</option>
+          <option value="label_propagation">Label Propagation</option>
+          <option value="greedy_modularity">Greedy Modularity</option>
+          <option value="none">None</option>
+        </select>
+      </label>
+
       <span class="hint">Tip: Press <kbd>Ctrl</kbd>/<kbd>⌘</kbd> + <kbd>Enter</kbd> to visualize</span>
     </div>
 

@@ -11,7 +11,11 @@ router = APIRouter(tags=["visualize"])
 
 
 @router.post("/visualize", response_class=HTMLResponse)
-def visualize(turtle: str = Form(...), include_literals: bool = Form(True)):
+def visualize(
+    turtle: str = Form(...),
+    include_literals: bool = Form(True),
+    community_algo: str = Form("leiden"),
+):
     if not turtle or turtle.strip() == "":
         raise HTTPException(status_code=422, detail="No Turtle content provided.")
     if len(turtle) > settings.max_turtle_chars:
@@ -32,5 +36,6 @@ def visualize(turtle: str = Form(...), include_literals: bool = Form(True)):
         include_literals=include_literals,
         bgcolor=settings.theme_bgcolor,
         fontcolor=settings.theme_fontcolor,
+        community_algo=community_algo,
     )
     return HTMLResponse(html)
