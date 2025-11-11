@@ -13,7 +13,12 @@ class Settings(BaseSettings):
     theme_bgcolor: str = "#0b1020"  # forwarded to PyVis
     theme_fontcolor: str = "#e7ecf5"
 
-    model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8")
+    model_config = SettingsConfigDict(
+        env_file=".env",
+        env_file_encoding="utf-8",
+        extra="ignore",
+    )
+
 
 
 settings = Settings()

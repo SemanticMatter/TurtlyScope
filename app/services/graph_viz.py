@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import pathlib
+from pydoc import html
 import re
 import tempfile
 
@@ -133,9 +134,7 @@ def _apply_theme_to_pyvis_html(pyvis_html: str, toolbar_right_extra: str = "") -
         count=1,
         flags=re.I | re.S,
     )
-
     return re.sub(r"</body>", "</div></div></body>", themed, count=1, flags=re.I | re.S)
-
 
 
 def visualize_rdflib_graph_to_html(
@@ -143,21 +142,12 @@ def visualize_rdflib_graph_to_html(
     include_literals: bool,
     bgcolor: str = "#0b1020",
     fontcolor: str = "#e7ecf5",
-    community_algo: str = "leiden",   # ← NEW
+    community_algo: str = "leiden",
 ) -> str:
-    net = Network(
-        height="100%",
-        width="100%",
-        bgcolor=bgcolor,
-        font_color=fontcolor,
-        cdn_resources="in_line",
-    )
-
-    # --- Build an NX view of the RDF graph for community detection ---
-    nx_dg = rdflib_to_networkx_digraph(graph)  # nodes are rdflib terms
+    # --- Compute communities on an NX view of the RDF graph ---
+    nx_dg = rdflib_to_networkx_digraph(graph)
     G_u = nx_dg.to_undirected()
 
-    # Compute communities (non-overlapping)
     comms: list[set] | None = None
     algo_used = "none"
     try:
@@ -166,7 +156,6 @@ def visualize_rdflib_graph_to_html(
                 comms = list(leiden_communities(G_u, weight=None, resolution=1.0, seed=42))
                 algo_used = "leiden"
             else:
-                # graceful fallback if Leiden not available
                 comms = list(louvain_communities(G_u, weight=None, resolution=1.0, seed=42))
                 algo_used = "louvain (fallback)"
         elif community_algo == "louvain":
@@ -182,18 +171,15 @@ def visualize_rdflib_graph_to_html(
             comms = None
             algo_used = "none"
     except Exception:
-        # If anything fails, render without community coloring
         comms = None
         algo_used = "none"
 
-    # Map node -> community id (if we have communities)
     node_to_comm: dict[object, int] = {}
     if comms:
         for cid, cset in enumerate(comms):
             for n in cset:
                 node_to_comm[n] = cid
 
-    # Optional: modularity (only if we have a partition)
     modularity = None
     if comms:
         try:
@@ -201,7 +187,14 @@ def visualize_rdflib_graph_to_html(
         except Exception:
             modularity = None
 
-    # ---- PyVis node/edge construction (color by community via "group") ----
+    # --- Build the PyVis network; color via 'group' per community ---
+    net = Network(
+        height="100%",
+        width="100%",
+        bgcolor=bgcolor,
+        font_color=fontcolor,
+        cdn_resources="in_line",
+    )
 
     node_ids: dict[object, str] = {}
     lit_counter = 0
@@ -214,11 +207,8 @@ def visualize_rdflib_graph_to_html(
     def add_node(term):
         if term in node_ids:
             return node_ids[term]
-
-        # PyVis color handling: set 'group' == community id if known, otherwise type-based
         comm_group = node_to_comm.get(term, None)
         group = f"C{comm_group}" if comm_group is not None else ("BNode" if isinstance(term, BNode) else "IRI")
-
         if isinstance(term, Literal):
             node_id = _make_literal_id(term)
             net.add_node(
@@ -238,7 +228,6 @@ def visualize_rdflib_graph_to_html(
                       + (f"\ncommunity=C{comm_group}" if comm_group is not None else ""),
                 group=group,
             )
-
         node_ids[term] = node_id
         return node_id
 
@@ -265,20 +254,62 @@ def visualize_rdflib_graph_to_html(
     }"""
     )
 
-    # Render PyVis
+    # Render PyVis to HTML string
     with tempfile.TemporaryDirectory() as tmpdir:
         out = pathlib.Path(tmpdir) / "graph.html"
         net.write_html(str(out), open_browser=False, notebook=False)
         raw = out.read_text(encoding="utf-8")
 
-    # Toolbar status badge (algo, #comms, modularity)
+    # --- Embed the original graph (as Turtle) + controls so user can switch algorithms ---
+    ttl_text = graph.serialize(format="turtle")
+    if not isinstance(ttl_text, str):
+        ttl_text = ttl_text.decode("utf-8", errors="replace")
+    ttl_escaped = html.escape(ttl_text)
+
+    # Selected option helper
+    def _sel(val: str) -> str:
+        return "selected" if community_algo == val else ""
+
+    mod_str = f"{modularity:.0%}" if isinstance(modularity, (int, float)) else "—"
     k = len(comms) if comms else 0
-    mod_str = f"{modularity:.3f}" if isinstance(modularity, (int, float)) else "—"
-    badge = f"""
-      <span class="hint" style="opacity:.9">
-        algo: <b>{algo_used}</b> • communities: <b>{k}</b> • modularity: <b>{mod_str}</b>
-      </span>
+
+    controls = f"""
+    <div style="display:flex; align-items:center; gap:.5rem;">
+      <label for="algo-select" class="hint">Community algorithm</label>
+      <select id="algo-select" class="btn" style="min-width:12rem;">
+        <option value="louvain" {_sel('louvain')}>Louvain</option>
+        <option value="leiden" {_sel('leiden')}>Leiden</option>
+        <option value="label_propagation" {_sel('label_propagation')}>Label Propagation</option>
+        <option value="greedy_modularity" {_sel('greedy_modularity')}>Greedy Modularity</option>
+        <option value="none" {_sel('none')}>None</option>
+      </select>
+      <span class="hint"> Communities: <b>{k}</b> • Modularity: <b>{mod_str}</b> • used: <b>{html.escape(algo_used)}</b></span>
+
+      <!-- Hidden state: serialized Turtle + include_literals -->
+      <textarea id="__ttl" style="display:none;">{ttl_escaped}</textarea>
+      <input type="hidden" id="__include_literals" value="{str(bool(include_literals)).lower()}" />
+    </div>
+
+    <script>
+    (function(){{
+      const sel = document.getElementById('algo-select');
+      const ttl = document.getElementById('__ttl');
+      const inc = document.getElementById('__include_literals');
+      async function reRender() {{
+        const fd = new FormData();
+        fd.append('turtle', ttl.value);
+        fd.append('include_literals', inc.value === 'true' ? 'on' : '');  // FastAPI parses checkbox-like values
+        fd.append('community_algo', sel.value);
+        try {{
+          const resp = await fetch('/api/visualize', {{ method: 'POST', body: fd }});
+          const html = await resp.text();
+          document.open(); document.write(html); document.close();
+        }} catch (e) {{
+          alert('Failed to re-render: ' + e);
+        }}
+      }}
+      sel.addEventListener('change', reRender);
+    }}())</script>
     """
 
-    return _apply_theme_to_pyvis_html(raw, toolbar_right_extra=badge)
-
+    return _apply_theme_to_pyvis_html(raw, toolbar_right_extra=controls)
