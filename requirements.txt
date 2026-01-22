@@ -148,7 +148,7 @@ uvicorn==0.37.0
     # via turtle-viz (/home/thomas/project/semanticmatter/turtle-viz/pyproject.toml)
 wcwidth==0.2.14
     # via prompt-toolkit
-wheel==0.45.1
+wheel==0.46.2
     # via pip-tools
 
 # The following packages are considered to be unsafe in a requirements file:
