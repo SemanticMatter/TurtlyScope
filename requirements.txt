@@ -111,7 +111,7 @@ pytest==9.0.3
     # via turtle-viz (/home/thomas/project/semanticmatter/turtle-viz/pyproject.toml)
 python-dotenv==1.1.1
     # via pydantic-settings
-python-multipart==0.0.22
+python-multipart==0.0.26
     # via turtle-viz (/home/thomas/project/semanticmatter/turtle-viz/pyproject.toml)
 pytokens==0.1.10
     # via black
