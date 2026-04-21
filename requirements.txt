@@ -109,7 +109,7 @@ pyproject-hooks==1.2.0
     #   pip-tools
 pytest==9.0.3
     # via turtle-viz (/home/thomas/project/semanticmatter/turtle-viz/pyproject.toml)
-python-dotenv==1.1.1
+python-dotenv==1.2.2
     # via pydantic-settings
 python-multipart==0.0.26
     # via turtle-viz (/home/thomas/project/semanticmatter/turtle-viz/pyproject.toml)
