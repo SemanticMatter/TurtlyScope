@@ -39,7 +39,7 @@ httpcore==1.0.9
     # via httpx
 httpx==0.28.1
     # via turtle-viz (/home/thomas/project/semanticmatter/turtle-viz/pyproject.toml)
-idna==3.18
+idna==3.19
     # via
     #   anyio
     #   httpx
@@ -109,7 +109,7 @@ pyproject-hooks==1.2.0
     #   pip-tools
 pytest==9.0.3
     # via turtle-viz (/home/thomas/project/semanticmatter/turtle-viz/pyproject.toml)
-python-dotenv==1.2.2
+python-dotenv==1.2.3
     # via pydantic-settings
 python-multipart==0.0.31
     # via turtle-viz (/home/thomas/project/semanticmatter/turtle-viz/pyproject.toml)
@@ -125,7 +125,7 @@ sniffio==1.3.1
     # via anyio
 stack-data==0.6.3
     # via ipython
-starlette==1.3.1
+starlette==1.6.0
     # via fastapi
 traitlets==5.14.3
     # via
@@ -148,7 +148,7 @@ uvicorn==0.37.0
     # via turtle-viz (/home/thomas/project/semanticmatter/turtle-viz/pyproject.toml)
 wcwidth==0.2.14
     # via prompt-toolkit
-wheel==0.47.0
+wheel==0.48.0
     # via pip-tools
 
 # The following packages are considered to be unsafe in a requirements file:
